@@ -1,0 +1,37 @@
+[package]
+name = "physics-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Moteur physique 2D de corps rigides en Rust (collisions, frictions, impulsions), zéro dépendance pour le cœur."
+license = "MIT"
+
+[lib]
+name = "physics"
+path = "src/lib.rs"
+
+[[bin]]
+name = "physics-cli"
+path = "src/bin/cli.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "physics-pixels"
+path = "src/bin/pixels.rs"
+required-features = ["pixels"]
+
+[features]
+default = ["cli"]
+cli = []
+pixels = ["dep:winit", "dep:softbuffer"]
+
+[dependencies]
+winit = { version = "0.30", optional = true }
+softbuffer = { version = "0.4", optional = true }
+
+[dev-dependencies]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
