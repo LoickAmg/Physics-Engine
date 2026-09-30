@@ -88,6 +88,30 @@ Deux pièges rencontrés en écrivant ce solveur, et pourquoi ils comptent :
   concrètement par `stack_of_five_boxes_does_not_collapse` (5 boîtes
   identiques, aucun décalage initial — le cas le plus défavorable).
 
+## Physics Playground : l'application interactive
+
+`physics-playground.exe` est une fenêtre (sans console) qui s'ouvre d'un double-clic :
+
+```bash
+cargo build --release --bin physics-playground
+# → target/release/physics-playground.exe (copiée aussi dans dist/)
+```
+
+- **6 scènes** : bac à sable, pyramide de 55 boîtes, dominos, planche de Galton (les
+  billes dessinent une courbe en cloche), billard sans gravité, course sur rampes
+  (glace, bois, caoutchouc) ;
+- **2 défis** : *Démolition* (5 boulets à la fronde pour faire tomber un château de
+  son socle, note sur 3 étoiles) et *Tour infernale* (20 pièces pour bâtir la tour la
+  plus haute, record sauvegardé) ;
+- **outils** : attraper et lancer à la souris, poser boîtes, balles et polygones,
+  tracer des planches fixes, fronde avec trajectoire prévue, explosion, gomme ;
+- **matériaux** (bois, caoutchouc, glace, acier, pierre : densité, rebond, frottement),
+  **gravité** réglable et orientable (Lune, Mars, Terre, Jupiter), ralenti, pas à pas ;
+- **rayons X** : points de contact et normales, vecteurs vitesse, boîtes englobantes,
+  énergie cinétique et quantité de mouvement en direct.
+
+Raccourcis : `Espace` pause, `N` pas à pas, `R` recommencer, molette pour zoomer,
+clic droit pour déplacer la vue. Option : `--scene 1..8`.
 ## Architecture
 
 ```
