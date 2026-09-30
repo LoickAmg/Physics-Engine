@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Dépendances système (winit sur Linux : X11, Wayland)
+      - name: "Dépendances système (winit sur Linux : X11, Wayland)"
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -37,7 +37,7 @@ jobs:
       - name: Lint (clippy, toutes les features)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Tests (toutes les features : cli, pixels)
+      - name: "Tests (toutes les features : cli, pixels)"
         run: cargo test --all-features
 
       - name: Build (toutes les features)
