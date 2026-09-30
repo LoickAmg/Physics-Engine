@@ -6,9 +6,15 @@
 
 mod scenes;
 
-use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Key, Margin, Pos2, Rect, RichText, Sense, Shape as EShape, Stroke, Vec2 as EVec2};
+use eframe::egui::{
+    self, Align2, Color32, CornerRadius, FontId, Key, Margin, Pos2, Rect, RichText, Sense,
+    Shape as EShape, Stroke, Vec2 as EVec2,
+};
 use physics::{RigidBody, Shape, Vec2, World};
-use scenes::{spawn, Built, Material, Meta, Role, Scene, GRAVITY, LAUNCHER, PLATFORM_TOP, STATIC_COLOR, TOWER_PIECES};
+use scenes::{
+    spawn, Built, Material, Meta, Role, Scene, GRAVITY, LAUNCHER, PLATFORM_TOP, STATIC_COLOR,
+    TOWER_PIECES,
+};
 
 const BG_TOP: Color32 = Color32::from_rgb(16, 20, 44);
 const BG_BOTTOM: Color32 = Color32::from_rgb(8, 9, 22);
@@ -32,7 +38,11 @@ fn main() -> eframe::Result {
             .with_min_inner_size([980.0, 600.0]),
         ..Default::default()
     };
-    eframe::run_native("Physics Playground", options, Box::new(|cc| Ok(Box::new(Playground::new(&cc.egui_ctx)))))
+    eframe::run_native(
+        "Physics Playground",
+        options,
+        Box::new(|cc| Ok(Box::new(Playground::new(&cc.egui_ctx)))),
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,7 +58,16 @@ enum Tool {
 }
 
 impl Tool {
-    const ALL: [Tool; 8] = [Tool::Hand, Tool::Box, Tool::Ball, Tool::Polygon, Tool::Plank, Tool::Slingshot, Tool::Explosion, Tool::Erase];
+    const ALL: [Tool; 8] = [
+        Tool::Hand,
+        Tool::Box,
+        Tool::Ball,
+        Tool::Polygon,
+        Tool::Plank,
+        Tool::Slingshot,
+        Tool::Explosion,
+        Tool::Erase,
+    ];
     fn label(self) -> &'static str {
         match self {
             Tool::Hand => "✋  Attraper / lancer",
@@ -158,7 +177,13 @@ impl Playground {
             .windows(2)
             .find(|w| w[0] == "--scene")
             .and_then(|w| w[1].parse::<usize>().ok())
-            .and_then(|n| Scene::PLAY.iter().chain(Scene::GAMES.iter()).nth(n.wrapping_sub(1)).copied())
+            .and_then(|n| {
+                Scene::PLAY
+                    .iter()
+                    .chain(Scene::GAMES.iter())
+                    .nth(n.wrapping_sub(1))
+                    .copied()
+            })
             .unwrap_or(Scene::Sandbox);
         p.load(scene);
         p
@@ -185,11 +210,19 @@ impl Playground {
         match scene {
             Scene::Demolition => {
                 self.tool = Tool::Slingshot;
-                self.toast("Glisse vers l'arrière depuis la fronde pour viser, relâche pour tirer !", CYAN, 6.0);
+                self.toast(
+                    "Glisse vers l'arrière depuis la fronde pour viser, relâche pour tirer !",
+                    CYAN,
+                    6.0,
+                );
             }
             Scene::Tower => {
                 self.tool = Tool::Box;
-                self.toast("Clique au-dessus du socle pour poser une pièce. Change de forme à gauche.", CYAN, 6.0);
+                self.toast(
+                    "Clique au-dessus du socle pour poser une pièce. Change de forme à gauche.",
+                    CYAN,
+                    6.0,
+                );
             }
             Scene::Billiard => self.tool = Tool::Hand,
             _ => {}
@@ -201,7 +234,8 @@ impl Playground {
             self.world.gravity = Vec2::ZERO;
             return;
         }
-        self.world.gravity = Vec2::new(self.gravity_dir.0, self.gravity_dir.1) * self.gravity_strength;
+        self.world.gravity =
+            Vec2::new(self.gravity_dir.0, self.gravity_dir.1) * self.gravity_strength;
     }
 
     fn toast(&mut self, text: &str, color: Color32, seconds: f64) {
@@ -217,12 +251,26 @@ impl Playground {
     }
 
     fn add(&mut self, shape: Shape, pos: Vec2, role: Role) -> usize {
-        spawn(&mut self.world, &mut self.meta, shape, pos, self.material, role, None)
+        spawn(
+            &mut self.world,
+            &mut self.meta,
+            shape,
+            pos,
+            self.material,
+            role,
+            None,
+        )
     }
 
     /// Indice du corps sous le point `p` (monde).
     fn pick(&self, p: Vec2) -> Option<usize> {
-        self.world.bodies.iter().enumerate().rev().find(|(_, b)| contains(b, p)).map(|(i, _)| i)
+        self.world
+            .bodies
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, b)| contains(b, p))
+            .map(|(i, _)| i)
     }
 
     fn step(&mut self, frame_dt: f64) {
@@ -263,22 +311,48 @@ impl Playground {
     fn update_games(&mut self) {
         match self.scene {
             Scene::Demolition => {
-                if self.shots_left == 0 && self.time - self.last_shot_time > 5.0 && self.toast.as_ref().is_none_or(|t| t.1 != GREEN && t.1 != GOLD) {
+                if self.shots_left == 0
+                    && self.time - self.last_shot_time > 5.0
+                    && self
+                        .toast
+                        .as_ref()
+                        .is_none_or(|t| t.1 != GREEN && t.1 != GOLD)
+                {
                     let (fallen, total) = self.demolition_score();
-                    let stars = if fallen == total { 3 } else if fallen * 10 >= total * 7 { 2 } else if fallen * 10 >= total * 4 { 1 } else { 0 };
+                    let stars = if fallen == total {
+                        3
+                    } else if fallen * 10 >= total * 7 {
+                        2
+                    } else if fallen * 10 >= total * 4 {
+                        1
+                    } else {
+                        0
+                    };
                     let text = format!(
                         "{} {} / {} pièces à terre. {}",
                         "★".repeat(stars) + &"☆".repeat(3 - stars),
                         fallen,
                         total,
-                        if stars == 3 { "Démolition totale !" } else { "Recommence (R) pour faire mieux !" }
+                        if stars == 3 {
+                            "Démolition totale !"
+                        } else {
+                            "Recommence (R) pour faire mieux !"
+                        }
                     );
                     self.toast = Some((text, if stars >= 2 { GREEN } else { GOLD }, f64::INFINITY));
                 }
             }
             Scene::Tower => {
-                let calm = self.world.bodies.iter().all(|b| b.is_static() || b.velocity.length() < 0.15);
-                self.calm_time = if calm { self.calm_time + self.frame_time } else { 0.0 };
+                let calm = self
+                    .world
+                    .bodies
+                    .iter()
+                    .all(|b| b.is_static() || b.velocity.length() < 0.15);
+                self.calm_time = if calm {
+                    self.calm_time + self.frame_time
+                } else {
+                    0.0
+                };
                 if self.calm_time > 1.0 {
                     let h = self.tower_height();
                     if h > self.best_height + 0.01 {
@@ -295,9 +369,24 @@ impl Playground {
     }
 
     fn demolition_score(&self) -> (usize, usize) {
-        let targets: Vec<&RigidBody> = self.world.bodies.iter().zip(&self.meta).filter(|(_, m)| m.role == Role::Target).map(|(b, _)| b).collect();
-        let total = self.meta.iter().filter(|m| m.role == Role::Target).count().max(targets.len());
-        let standing = targets.iter().filter(|b| b.position.y > PLATFORM_TOP && (b.position.x - 12.0).abs() < 4.6).count();
+        let targets: Vec<&RigidBody> = self
+            .world
+            .bodies
+            .iter()
+            .zip(&self.meta)
+            .filter(|(_, m)| m.role == Role::Target)
+            .map(|(b, _)| b)
+            .collect();
+        let total = self
+            .meta
+            .iter()
+            .filter(|m| m.role == Role::Target)
+            .count()
+            .max(targets.len());
+        let standing = targets
+            .iter()
+            .filter(|b| b.position.y > PLATFORM_TOP && (b.position.x - 12.0).abs() < 4.6)
+            .count();
         // Les pièces tombées hors du monde ont disparu : elles comptent comme à terre.
         (TARGET_COUNT.max(total) - standing, TARGET_COUNT.max(total))
     }
@@ -339,12 +428,20 @@ impl eframe::App for Playground {
         egui::Panel::left("tools")
             .exact_size(290.0)
             .resizable(false)
-            .frame(egui::Frame::new().fill(PANEL).inner_margin(Margin::same(18)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL)
+                    .inner_margin(Margin::same(18)),
+            )
             .show(ui, |ui| self.left_panel(ui));
         egui::Panel::right("world")
             .exact_size(290.0)
             .resizable(false)
-            .frame(egui::Frame::new().fill(PANEL).inner_margin(Margin::same(18)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL)
+                    .inner_margin(Margin::same(18)),
+            )
             .show(ui, |ui| self.right_panel(ui));
         egui::CentralPanel::no_frame().show(ui, |ui| self.canvas(ui));
         ctx.request_repaint();
@@ -356,7 +453,13 @@ impl Playground {
         if ctx.egui_wants_keyboard_input() {
             return;
         }
-        let (space, r, n) = ctx.input(|i| (i.key_pressed(Key::Space), i.key_pressed(Key::R), i.key_pressed(Key::N)));
+        let (space, r, n) = ctx.input(|i| {
+            (
+                i.key_pressed(Key::Space),
+                i.key_pressed(Key::R),
+                i.key_pressed(Key::N),
+            )
+        });
         if space {
             self.paused = !self.paused;
         }
@@ -371,86 +474,141 @@ impl Playground {
 
     fn left_panel(&mut self, ui: &mut egui::Ui) {
         ui.label(RichText::new("PHYSICS").size(30.0).strong().color(TEXT));
-        ui.label(RichText::new("PLAYGROUND").size(30.0).strong().color(ACCENT));
+        ui.label(
+            RichText::new("PLAYGROUND")
+                .size(30.0)
+                .strong()
+                .color(ACCENT),
+        );
         ui.label(RichText::new("Le labo des objets qui tombent").color(DIM));
         ui.add_space(12.0);
-        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-            let full = ui.available_width() - 6.0;
-            section(ui, "SCÈNES");
-            egui::Grid::new("scenes").num_columns(2).spacing([6.0, 6.0]).show(ui, |ui| {
-                for (i, s) in Scene::PLAY.iter().enumerate() {
-                    let b = egui::Button::new(RichText::new(format!("{}  {}", s.icon(), s.label())).size(13.0))
-                        .min_size(EVec2::new((full - 6.0) / 2.0, 34.0))
-                        .selected(self.scene == *s);
-                    if ui.add(b).on_hover_text(s.description()).clicked() {
-                        self.load(*s);
-                    }
-                    if i % 2 == 1 {
-                        ui.end_row();
-                    }
-                }
-            });
-            ui.add_space(10.0);
-            section(ui, "DÉFIS");
-            for s in Scene::GAMES {
-                let b = egui::Button::new(RichText::new(format!("{}  {}", s.icon(), s.label())).size(14.5))
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                let full = ui.available_width() - 6.0;
+                section(ui, "SCÈNES");
+                egui::Grid::new("scenes")
+                    .num_columns(2)
+                    .spacing([6.0, 6.0])
+                    .show(ui, |ui| {
+                        for (i, s) in Scene::PLAY.iter().enumerate() {
+                            let b = egui::Button::new(
+                                RichText::new(format!("{}  {}", s.icon(), s.label())).size(13.0),
+                            )
+                            .min_size(EVec2::new((full - 6.0) / 2.0, 34.0))
+                            .selected(self.scene == *s);
+                            if ui.add(b).on_hover_text(s.description()).clicked() {
+                                self.load(*s);
+                            }
+                            if i % 2 == 1 {
+                                ui.end_row();
+                            }
+                        }
+                    });
+                ui.add_space(10.0);
+                section(ui, "DÉFIS");
+                for s in Scene::GAMES {
+                    let b = egui::Button::new(
+                        RichText::new(format!("{}  {}", s.icon(), s.label())).size(14.5),
+                    )
                     .min_size(EVec2::new(full, 36.0))
                     .selected(self.scene == s);
-                if ui.add(b).on_hover_text(s.description()).clicked() {
-                    self.load(s);
+                    if ui.add(b).on_hover_text(s.description()).clicked() {
+                        self.load(s);
+                    }
                 }
-            }
 
-            ui.add_space(10.0);
-            section(ui, "OUTILS");
-            egui::Grid::new("tools").num_columns(2).spacing([6.0, 6.0]).show(ui, |ui| {
-                for (i, t) in Tool::ALL.iter().enumerate() {
-                    let b = egui::Button::new(RichText::new(t.label()).size(13.0))
-                        .min_size(EVec2::new((full - 6.0) / 2.0, 32.0))
-                        .selected(self.tool == *t);
-                    if ui.add(b).clicked() {
-                        self.tool = *t;
-                    }
-                    if i % 2 == 1 {
-                        ui.end_row();
-                    }
-                }
-            });
-            ui.add_space(4.0);
-            ui.label(RichText::new(self.tool.hint()).size(12.5).color(DIM));
+                ui.add_space(10.0);
+                section(ui, "OUTILS");
+                egui::Grid::new("tools")
+                    .num_columns(2)
+                    .spacing([6.0, 6.0])
+                    .show(ui, |ui| {
+                        for (i, t) in Tool::ALL.iter().enumerate() {
+                            let b = egui::Button::new(RichText::new(t.label()).size(13.0))
+                                .min_size(EVec2::new((full - 6.0) / 2.0, 32.0))
+                                .selected(self.tool == *t);
+                            if ui.add(b).clicked() {
+                                self.tool = *t;
+                            }
+                            if i % 2 == 1 {
+                                ui.end_row();
+                            }
+                        }
+                    });
+                ui.add_space(4.0);
+                ui.label(RichText::new(self.tool.hint()).size(12.5).color(DIM));
 
-            ui.add_space(10.0);
-            section(ui, "MATÉRIAU");
-            ui.horizontal_wrapped(|ui| {
-                for m in Material::ALL {
-                    let text = RichText::new(m.label()).color(if self.material == m { Color32::BLACK } else { m.color() });
-                    let b = egui::Button::new(text).fill(if self.material == m { m.color() } else { PANEL_2 });
-                    if ui.add(b).on_hover_text(m.describe()).clicked() {
-                        self.material = m;
+                ui.add_space(10.0);
+                section(ui, "MATÉRIAU");
+                ui.horizontal_wrapped(|ui| {
+                    for m in Material::ALL {
+                        let text = RichText::new(m.label()).color(if self.material == m {
+                            Color32::BLACK
+                        } else {
+                            m.color()
+                        });
+                        let b = egui::Button::new(text).fill(if self.material == m {
+                            m.color()
+                        } else {
+                            PANEL_2
+                        });
+                        if ui.add(b).on_hover_text(m.describe()).clicked() {
+                            self.material = m;
+                        }
                     }
-                }
+                });
+                ui.label(
+                    RichText::new(self.material.describe())
+                        .size(12.5)
+                        .color(DIM),
+                );
+                ui.add(egui::Slider::new(&mut self.size, 0.3..=3.0).text("taille (m)"));
             });
-            ui.label(RichText::new(self.material.describe()).size(12.5).color(DIM));
-            ui.add(egui::Slider::new(&mut self.size, 0.3..=3.0).text("taille (m)"));
-        });
     }
 
     fn right_panel(&mut self, ui: &mut egui::Ui) {
         section(ui, "TEMPS");
         ui.horizontal(|ui| {
-            let label = if self.paused { "▶  Reprendre" } else { "⏸  Pause" };
-            if ui.add(egui::Button::new(RichText::new(label).size(14.0)).min_size(EVec2::new(120.0, 32.0))).clicked() {
+            let label = if self.paused {
+                "▶  Reprendre"
+            } else {
+                "⏸  Pause"
+            };
+            if ui
+                .add(
+                    egui::Button::new(RichText::new(label).size(14.0))
+                        .min_size(EVec2::new(120.0, 32.0)),
+                )
+                .clicked()
+            {
                 self.paused = !self.paused;
             }
-            if ui.add_enabled(self.paused, egui::Button::new("⏭").min_size(EVec2::new(36.0, 32.0))).on_hover_text("Pas à pas (N)").clicked() {
+            if ui
+                .add_enabled(
+                    self.paused,
+                    egui::Button::new("⏭").min_size(EVec2::new(36.0, 32.0)),
+                )
+                .on_hover_text("Pas à pas (N)")
+                .clicked()
+            {
                 self.world.step(DT);
                 self.time += DT;
             }
-            if ui.add(egui::Button::new("⟲").min_size(EVec2::new(36.0, 32.0))).on_hover_text("Recommencer (R)").clicked() {
+            if ui
+                .add(egui::Button::new("⟲").min_size(EVec2::new(36.0, 32.0)))
+                .on_hover_text("Recommencer (R)")
+                .clicked()
+            {
                 self.load(self.scene);
             }
         });
-        ui.add(egui::Slider::new(&mut self.slow_motion, 0.1..=2.0).logarithmic(true).text("vitesse").suffix("×"));
+        ui.add(
+            egui::Slider::new(&mut self.slow_motion, 0.1..=2.0)
+                .logarithmic(true)
+                .text("vitesse")
+                .suffix("×"),
+        );
 
         if self.scene != Scene::Billiard {
             ui.add_space(10.0);
@@ -458,14 +616,32 @@ impl Playground {
             let before = (self.gravity_strength, self.gravity_dir);
             ui.add(egui::Slider::new(&mut self.gravity_strength, 0.0..=30.0).text("m/s²"));
             ui.horizontal(|ui| {
-                for (label, dir, tip) in [("⬇", (0.0, -1.0), "Vers le bas"), ("⬆", (0.0, 1.0), "Vers le haut"), ("⬅", (-1.0, 0.0), "Vers la gauche"), ("➡", (1.0, 0.0), "Vers la droite")] {
-                    if ui.add(egui::Button::new(label).min_size(EVec2::new(40.0, 30.0)).selected(self.gravity_dir == dir)).on_hover_text(tip).clicked() {
+                for (label, dir, tip) in [
+                    ("⬇", (0.0, -1.0), "Vers le bas"),
+                    ("⬆", (0.0, 1.0), "Vers le haut"),
+                    ("⬅", (-1.0, 0.0), "Vers la gauche"),
+                    ("➡", (1.0, 0.0), "Vers la droite"),
+                ] {
+                    if ui
+                        .add(
+                            egui::Button::new(label)
+                                .min_size(EVec2::new(40.0, 30.0))
+                                .selected(self.gravity_dir == dir),
+                        )
+                        .on_hover_text(tip)
+                        .clicked()
+                    {
                         self.gravity_dir = dir;
                     }
                 }
             });
             ui.horizontal_wrapped(|ui| {
-                for (label, g) in [("Lune", 1.62), ("Mars", 3.71), ("Terre", 9.81), ("Jupiter", 24.8)] {
+                for (label, g) in [
+                    ("Lune", 1.62),
+                    ("Mars", 3.71),
+                    ("Terre", 9.81),
+                    ("Jupiter", 24.8),
+                ] {
                     if ui.small_button(label).clicked() {
                         self.gravity_strength = g;
                     }
@@ -486,10 +662,33 @@ impl Playground {
         section(ui, "MESURES");
         let dynamic = self.world.bodies.iter().filter(|b| !b.is_static()).count();
         stat(ui, "Objets", format!("{dynamic}"));
-        stat(ui, "Contacts", format!("{}", self.world.last_manifolds.iter().map(|m| m.contacts.len()).sum::<usize>()));
-        stat(ui, "Énergie cinétique", format!("{:.1} J", self.world.kinetic_energy()));
-        stat(ui, "Quantité de mouvement", format!("{:.1}", self.world.total_momentum().length()));
-        stat(ui, "Images / s", format!("{:.0}", 1.0 / self.frame_time.max(1e-3)));
+        stat(
+            ui,
+            "Contacts",
+            format!(
+                "{}",
+                self.world
+                    .last_manifolds
+                    .iter()
+                    .map(|m| m.contacts.len())
+                    .sum::<usize>()
+            ),
+        );
+        stat(
+            ui,
+            "Énergie cinétique",
+            format!("{:.1} J", self.world.kinetic_energy()),
+        );
+        stat(
+            ui,
+            "Quantité de mouvement",
+            format!("{:.1}", self.world.total_momentum().length()),
+        );
+        stat(
+            ui,
+            "Images / s",
+            format!("{:.0}", 1.0 / self.frame_time.max(1e-3)),
+        );
 
         match self.scene {
             Scene::Demolition => {
@@ -519,11 +718,22 @@ impl Playground {
         let (response, painter) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
         let rect = response.rect;
         if self.zoom <= 0.0 {
-            self.zoom = (rect.width() * 0.5 / self.view_half_width as f32).min(rect.height() * 0.5 / (self.view_half_width as f32 * 0.62));
+            self.zoom = (rect.width() * 0.5 / self.view_half_width as f32)
+                .min(rect.height() * 0.5 / (self.view_half_width as f32 * 0.62));
         }
         let (c, z, vc) = (rect.center(), self.zoom, self.view_center);
-        let to_screen = move |p: Vec2| Pos2::new(c.x + ((p.x - vc.x) as f32) * z, c.y - ((p.y - vc.y) as f32) * z);
-        let to_world = move |s: Pos2| Vec2::new(vc.x + ((s.x - c.x) / z) as f64, vc.y - ((s.y - c.y) / z) as f64);
+        let to_screen = move |p: Vec2| {
+            Pos2::new(
+                c.x + ((p.x - vc.x) as f32) * z,
+                c.y - ((p.y - vc.y) as f32) * z,
+            )
+        };
+        let to_world = move |s: Pos2| {
+            Vec2::new(
+                vc.x + ((s.x - c.x) / z) as f64,
+                vc.y - ((s.y - c.y) / z) as f64,
+            )
+        };
 
         // --- entrées
         if response.hovered() {
@@ -532,16 +742,24 @@ impl Playground {
                 if let Some(m) = response.hover_pos() {
                     let before = to_world(m);
                     self.zoom = (self.zoom * (scroll * 0.0018).exp()).clamp(4.0, 300.0);
-                    let after = Vec2::new(vc.x + ((m.x - c.x) / self.zoom) as f64, vc.y - ((m.y - c.y) / self.zoom) as f64);
-                    self.view_center = self.view_center + (before - after);
+                    let after = Vec2::new(
+                        vc.x + ((m.x - c.x) / self.zoom) as f64,
+                        vc.y - ((m.y - c.y) / self.zoom) as f64,
+                    );
+                    self.view_center += before - after;
                 }
             }
         }
-        if response.dragged_by(egui::PointerButton::Secondary) || response.dragged_by(egui::PointerButton::Middle) {
+        if response.dragged_by(egui::PointerButton::Secondary)
+            || response.dragged_by(egui::PointerButton::Middle)
+        {
             let d = response.drag_delta();
-            self.view_center = self.view_center + Vec2::new((-d.x / z) as f64, (d.y / z) as f64);
+            self.view_center += Vec2::new((-d.x / z) as f64, (d.y / z) as f64);
         }
-        let pointer = response.interact_pointer_pos().or(response.hover_pos()).map(to_world);
+        let pointer = response
+            .interact_pointer_pos()
+            .or(response.hover_pos())
+            .map(to_world);
         self.handle_tools(&response, pointer);
 
         // --- fond : dégradé + quadrillage d'un mètre
@@ -552,12 +770,18 @@ impl Playground {
             let origin = to_screen(Vec2::ZERO);
             let mut x = origin.x.rem_euclid(step) + rect.left() - rect.left().rem_euclid(step);
             while x < rect.right() {
-                painter.line_segment([Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())], Stroke::new(1.0, grid));
+                painter.line_segment(
+                    [Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())],
+                    Stroke::new(1.0, grid),
+                );
                 x += step;
             }
             let mut y = origin.y.rem_euclid(step) + rect.top() - rect.top().rem_euclid(step);
             while y < rect.bottom() {
-                painter.line_segment([Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)], Stroke::new(1.0, grid));
+                painter.line_segment(
+                    [Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)],
+                    Stroke::new(1.0, grid),
+                );
                 y += step;
             }
         }
@@ -567,15 +791,40 @@ impl Playground {
             Scene::Demolition => {
                 let p = to_screen(LAUNCHER);
                 painter.circle_stroke(p, 18.0, Stroke::new(2.0, ACCENT));
-                painter.text(p + EVec2::new(0.0, -30.0), Align2::CENTER_CENTER, format!("FRONDE · {} boulet{}", self.shots_left, if self.shots_left > 1 { "s" } else { "" }), FontId::proportional(13.0), ACCENT);
+                painter.text(
+                    p + EVec2::new(0.0, -30.0),
+                    Align2::CENTER_CENTER,
+                    format!(
+                        "FRONDE · {} boulet{}",
+                        self.shots_left,
+                        if self.shots_left > 1 { "s" } else { "" }
+                    ),
+                    FontId::proportional(13.0),
+                    ACCENT,
+                );
             }
             Scene::Tower => {
                 let base = to_screen(Vec2::new(0.0, 1.0));
-                for (h, color, label) in [(self.best_height, GREEN, "hauteur"), (self.record_height, GOLD, "record")] {
+                for (h, color, label) in [
+                    (self.best_height, GREEN, "hauteur"),
+                    (self.record_height, GOLD, "record"),
+                ] {
                     if h > 0.05 {
                         let y = to_screen(Vec2::new(0.0, 1.0 + h)).y;
-                        painter.line_segment([Pos2::new(rect.left() + 20.0, y), Pos2::new(rect.right() - 20.0, y)], Stroke::new(1.0, color.gamma_multiply(0.6)));
-                        painter.text(Pos2::new(rect.right() - 24.0, y - 4.0), Align2::RIGHT_BOTTOM, format!("{label} {h:.2} m"), FontId::proportional(13.0), color);
+                        painter.line_segment(
+                            [
+                                Pos2::new(rect.left() + 20.0, y),
+                                Pos2::new(rect.right() - 20.0, y),
+                            ],
+                            Stroke::new(1.0, color.gamma_multiply(0.6)),
+                        );
+                        painter.text(
+                            Pos2::new(rect.right() - 24.0, y - 4.0),
+                            Align2::RIGHT_BOTTOM,
+                            format!("{label} {h:.2} m"),
+                            FontId::proportional(13.0),
+                            color,
+                        );
                     }
                 }
                 let _ = base;
@@ -587,17 +836,27 @@ impl Playground {
         for (i, (b, m)) in self.world.bodies.iter().zip(&self.meta).enumerate() {
             let grabbed = self.grab.map(|g| g.0) == Some(i);
             let fill = if b.is_static() { STATIC_COLOR } else { m.color };
-            let outline = if grabbed { Stroke::new(2.5, Color32::WHITE) } else { Stroke::new(1.5, darken(fill, 0.55)) };
+            let outline = if grabbed {
+                Stroke::new(2.5, Color32::WHITE)
+            } else {
+                Stroke::new(1.5, darken(fill, 0.55))
+            };
             match &b.shape {
                 Shape::Circle { radius } => {
                     let p = to_screen(b.position);
                     let r = *radius as f32 * z;
                     painter.circle(p, r, fill, outline);
                     // Rayon pour voir la rotation
-                    let tip = to_screen(b.position + Vec2::new(b.rotation.cos(), b.rotation.sin()) * *radius * 0.8);
+                    let tip = to_screen(
+                        b.position + Vec2::new(b.rotation.cos(), b.rotation.sin()) * *radius * 0.8,
+                    );
                     painter.line_segment([p, tip], Stroke::new(1.5, darken(fill, 0.5)));
                     if !b.is_static() {
-                        painter.circle_filled(p + EVec2::new(-r * 0.35, -r * 0.35), r * 0.25, Color32::from_rgba_unmultiplied(255, 255, 255, 70));
+                        painter.circle_filled(
+                            p + EVec2::new(-r * 0.35, -r * 0.35),
+                            r * 0.25,
+                            Color32::from_rgba_unmultiplied(255, 255, 255, 70),
+                        );
                     }
                 }
                 Shape::Polygon { .. } => {
@@ -605,11 +864,19 @@ impl Playground {
                     painter.add(EShape::convex_polygon(pts.clone(), fill, outline));
                     if !b.is_static() && pts.len() >= 2 {
                         // Liseré clair sur l'arête du haut : effet de volume
-                        let top = pts.iter().enumerate().min_by(|a, b| a.1.y.total_cmp(&b.1.y)).map(|(k, _)| k).unwrap_or(0);
+                        let top = pts
+                            .iter()
+                            .enumerate()
+                            .min_by(|a, b| a.1.y.total_cmp(&b.1.y))
+                            .map(|(k, _)| k)
+                            .unwrap_or(0);
                         let next = pts[(top + 1) % pts.len()];
                         let prev = pts[(top + pts.len() - 1) % pts.len()];
                         let other = if next.y < prev.y { next } else { prev };
-                        painter.line_segment([pts[top], other], Stroke::new(2.0, Color32::from_rgba_unmultiplied(255, 255, 255, 60)));
+                        painter.line_segment(
+                            [pts[top], other],
+                            Stroke::new(2.0, Color32::from_rgba_unmultiplied(255, 255, 255, 60)),
+                        );
                     }
                 }
             }
@@ -618,12 +885,21 @@ impl Playground {
             }
             if self.show_velocity && !b.is_static() && b.velocity.length() > 0.05 {
                 let p = to_screen(b.position);
-                painter.arrow(p, EVec2::new(b.velocity.x as f32, -b.velocity.y as f32) * z * 0.12, Stroke::new(1.5, GREEN));
+                painter.arrow(
+                    p,
+                    EVec2::new(b.velocity.x as f32, -b.velocity.y as f32) * z * 0.12,
+                    Stroke::new(1.5, GREEN),
+                );
             }
             if self.show_aabb {
                 let a = b.world_aabb();
                 let r = Rect::from_two_pos(to_screen(a.min), to_screen(a.max));
-                painter.rect_stroke(r, CornerRadius::ZERO, Stroke::new(1.0, CYAN.gamma_multiply(0.5)), egui::StrokeKind::Middle);
+                painter.rect_stroke(
+                    r,
+                    CornerRadius::ZERO,
+                    Stroke::new(1.0, CYAN.gamma_multiply(0.5)),
+                    egui::StrokeKind::Middle,
+                );
             }
         }
         if self.show_contacts {
@@ -631,7 +907,13 @@ impl Playground {
                 for p in &m.contacts {
                     let s = to_screen(*p);
                     painter.circle_filled(s, 3.5, PINK);
-                    painter.line_segment([s, s + EVec2::new(m.normal.x as f32, -m.normal.y as f32) * 16.0], Stroke::new(1.5, PINK));
+                    painter.line_segment(
+                        [
+                            s,
+                            s + EVec2::new(m.normal.x as f32, -m.normal.y as f32) * 16.0,
+                        ],
+                        Stroke::new(1.5, PINK),
+                    );
                 }
             }
         }
@@ -640,22 +922,46 @@ impl Playground {
         if let (Some(from), Some(to)) = (self.drag_from, pointer) {
             match self.tool {
                 Tool::Plank => {
-                    painter.line_segment([to_screen(from), to_screen(to)], Stroke::new((0.3 * z).max(3.0), STATIC_COLOR.gamma_multiply(1.6)));
-                    painter.text(to_screen(to) + EVec2::new(12.0, 12.0), Align2::LEFT_TOP, format!("{:.1} m", (to - from).length()), FontId::proportional(13.0), TEXT);
+                    painter.line_segment(
+                        [to_screen(from), to_screen(to)],
+                        Stroke::new((0.3 * z).max(3.0), STATIC_COLOR.gamma_multiply(1.6)),
+                    );
+                    painter.text(
+                        to_screen(to) + EVec2::new(12.0, 12.0),
+                        Align2::LEFT_TOP,
+                        format!("{:.1} m", (to - from).length()),
+                        FontId::proportional(13.0),
+                        TEXT,
+                    );
                 }
                 Tool::Slingshot => {
                     let v = self.sling_velocity(from, to);
-                    painter.line_segment([to_screen(from), to_screen(to)], Stroke::new(2.0, ACCENT.gamma_multiply(0.7)));
+                    painter.line_segment(
+                        [to_screen(from), to_screen(to)],
+                        Stroke::new(2.0, ACCENT.gamma_multiply(0.7)),
+                    );
                     // Trajectoire balistique prévue (sans les collisions)
                     let g = self.world.gravity;
-                    let pts: Vec<Pos2> = (0..60).map(|k| {
-                        let t = k as f64 * 0.05;
-                        to_screen(from + v * t + g * (0.5 * t * t))
-                    }).collect();
+                    let pts: Vec<Pos2> = (0..60)
+                        .map(|k| {
+                            let t = k as f64 * 0.05;
+                            to_screen(from + v * t + g * (0.5 * t * t))
+                        })
+                        .collect();
                     for (k, p) in pts.iter().enumerate().step_by(2) {
-                        painter.circle_filled(*p, 2.5, ACCENT.gamma_multiply(1.0 - k as f32 / 70.0));
+                        painter.circle_filled(
+                            *p,
+                            2.5,
+                            ACCENT.gamma_multiply(1.0 - k as f32 / 70.0),
+                        );
                     }
-                    painter.text(to_screen(to) + EVec2::new(12.0, 12.0), Align2::LEFT_TOP, format!("{:.1} m/s", v.length()), FontId::proportional(13.0), ACCENT);
+                    painter.text(
+                        to_screen(to) + EVec2::new(12.0, 12.0),
+                        Align2::LEFT_TOP,
+                        format!("{:.1} m/s", v.length()),
+                        FontId::proportional(13.0),
+                        ACCENT,
+                    );
                 }
                 _ => {}
             }
@@ -665,13 +971,26 @@ impl Playground {
             match self.tool {
                 Tool::Box => {
                     let h = self.size as f32 * z / 2.0;
-                    painter.rect_stroke(Rect::from_center_size(to_screen(p), EVec2::splat(h * 2.0)), CornerRadius::ZERO, Stroke::new(1.5, ghost), egui::StrokeKind::Middle);
+                    painter.rect_stroke(
+                        Rect::from_center_size(to_screen(p), EVec2::splat(h * 2.0)),
+                        CornerRadius::ZERO,
+                        Stroke::new(1.5, ghost),
+                        egui::StrokeKind::Middle,
+                    );
                 }
                 Tool::Ball | Tool::Polygon => {
-                    painter.circle_stroke(to_screen(p), self.size as f32 * z / 2.0, Stroke::new(1.5, ghost));
+                    painter.circle_stroke(
+                        to_screen(p),
+                        self.size as f32 * z / 2.0,
+                        Stroke::new(1.5, ghost),
+                    );
                 }
                 Tool::Explosion => {
-                    painter.circle_stroke(to_screen(p), 4.0 * z, Stroke::new(1.0, PINK.gamma_multiply(0.5)));
+                    painter.circle_stroke(
+                        to_screen(p),
+                        4.0 * z,
+                        Stroke::new(1.0, PINK.gamma_multiply(0.5)),
+                    );
                 }
                 _ => {}
             }
@@ -685,7 +1004,14 @@ impl Playground {
         });
         for r in &self.ripples {
             let k = r.age / 0.6;
-            painter.circle_stroke(to_screen(r.pos), 4.0 * z * (0.3 + k), Stroke::new(4.0 * (1.0 - k), Color32::from_rgba_unmultiplied(255, 140, 60, ((1.0 - k) * 255.0) as u8)));
+            painter.circle_stroke(
+                to_screen(r.pos),
+                4.0 * z * (0.3 + k),
+                Stroke::new(
+                    4.0 * (1.0 - k),
+                    Color32::from_rgba_unmultiplied(255, 140, 60, ((1.0 - k) * 255.0) as u8),
+                ),
+            );
         }
 
         // --- bandeau
@@ -694,20 +1020,42 @@ impl Playground {
             _ => None,
         };
         let (text, color) = banner.unwrap_or((self.scene.description().to_string(), DIM));
-        let galley = painter.layout(text, FontId::proportional(15.0), color, rect.width() - 120.0);
+        let galley = painter.layout(
+            text,
+            FontId::proportional(15.0),
+            color,
+            rect.width() - 120.0,
+        );
         let size = galley.size() + EVec2::new(28.0, 16.0);
-        let top = Rect::from_min_size(Pos2::new(rect.center().x - size.x / 2.0, rect.top() + 16.0), size);
-        painter.rect_filled(top, CornerRadius::same(12), Color32::from_rgba_unmultiplied(14, 16, 34, 215));
+        let top = Rect::from_min_size(
+            Pos2::new(rect.center().x - size.x / 2.0, rect.top() + 16.0),
+            size,
+        );
+        painter.rect_filled(
+            top,
+            CornerRadius::same(12),
+            Color32::from_rgba_unmultiplied(14, 16, 34, 215),
+        );
         painter.galley(top.min + EVec2::new(14.0, 8.0), galley, color);
         if self.paused {
-            painter.text(rect.center_bottom() + EVec2::new(0.0, -24.0), Align2::CENTER_BOTTOM, "⏸  EN PAUSE", FontId::proportional(18.0), GOLD);
+            painter.text(
+                rect.center_bottom() + EVec2::new(0.0, -24.0),
+                Align2::CENTER_BOTTOM,
+                "⏸  EN PAUSE",
+                FontId::proportional(18.0),
+                GOLD,
+            );
         }
     }
 
     fn sling_velocity(&self, from: Vec2, to: Vec2) -> Vec2 {
         let v = (from - to) * 3.2;
         let max = 32.0;
-        if v.length() > max { v * (max / v.length()) } else { v }
+        if v.length() > max {
+            v * (max / v.length())
+        } else {
+            v
+        }
     }
 
     fn handle_tools(&mut self, response: &egui::Response, pointer: Option<Vec2>) {
@@ -718,7 +1066,10 @@ impl Playground {
         match self.tool {
             Tool::Hand => {
                 if primary_start {
-                    self.grab = self.pick(p).filter(|i| !self.world.bodies[*i].is_static()).map(|i| (i, p));
+                    self.grab = self
+                        .pick(p)
+                        .filter(|i| !self.world.bodies[*i].is_static())
+                        .map(|i| (i, p));
                 }
                 if let Some((i, _)) = self.grab {
                     self.grab = Some((i, p));
@@ -729,7 +1080,11 @@ impl Playground {
             }
             Tool::Plank | Tool::Slingshot => {
                 if primary_start {
-                    let from = if self.scene == Scene::Demolition && self.tool == Tool::Slingshot { LAUNCHER } else { p };
+                    let from = if self.scene == Scene::Demolition && self.tool == Tool::Slingshot {
+                        LAUNCHER
+                    } else {
+                        p
+                    };
                     self.drag_from = Some(from);
                 }
                 if primary_stop {
@@ -738,10 +1093,17 @@ impl Playground {
                             let d = p - from;
                             let len = d.length();
                             if len > 0.3 {
-                                let mut body = RigidBody::static_body(Shape::rectangle(len, 0.3), (from + p) * 0.5).with_friction(0.7);
+                                let mut body = RigidBody::static_body(
+                                    Shape::rectangle(len, 0.3),
+                                    (from + p) * 0.5,
+                                )
+                                .with_friction(0.7);
                                 body.rotation = d.y.atan2(d.x);
                                 self.world.add_body(body);
-                                self.meta.push(Meta { color: STATIC_COLOR, role: Role::Normal });
+                                self.meta.push(Meta {
+                                    color: STATIC_COLOR,
+                                    role: Role::Normal,
+                                });
                             }
                         } else {
                             self.fire(from, self.sling_velocity(from, p));
@@ -753,7 +1115,11 @@ impl Playground {
                 if clicked {
                     if self.scene == Scene::Tower {
                         if self.pieces_left == 0 {
-                            self.toast("Plus de pièces ! Recommence (R) pour tenter un nouveau record.", GOLD, 4.0);
+                            self.toast(
+                                "Plus de pièces ! Recommence (R) pour tenter un nouveau record.",
+                                GOLD,
+                                4.0,
+                            );
                             return;
                         }
                         self.pieces_left -= 1;
@@ -794,13 +1160,25 @@ impl Playground {
     fn fire(&mut self, from: Vec2, v: Vec2) {
         if self.scene == Scene::Demolition {
             if self.shots_left == 0 {
-                self.toast("Plus de boulets ! Recommence (R) pour une nouvelle démolition.", GOLD, 4.0);
+                self.toast(
+                    "Plus de boulets ! Recommence (R) pour une nouvelle démolition.",
+                    GOLD,
+                    4.0,
+                );
                 return;
             }
             self.shots_left -= 1;
             self.last_shot_time = self.time;
         }
-        let i = spawn(&mut self.world, &mut self.meta, Shape::circle(0.45), from, Material::Steel, Role::Ammo, Some(Color32::from_rgb(200, 208, 230)));
+        let i = spawn(
+            &mut self.world,
+            &mut self.meta,
+            Shape::circle(0.45),
+            from,
+            Material::Steel,
+            Role::Ammo,
+            Some(Color32::from_rgb(200, 208, 230)),
+        );
         self.world.bodies[i].velocity = v;
     }
 }
@@ -819,7 +1197,11 @@ fn random_polygon(radius: f64, seed: f64) -> Shape {
 }
 
 fn darken(c: Color32, k: f32) -> Color32 {
-    Color32::from_rgb((c.r() as f32 * k) as u8, (c.g() as f32 * k) as u8, (c.b() as f32 * k) as u8)
+    Color32::from_rgb(
+        (c.r() as f32 * k) as u8,
+        (c.g() as f32 * k) as u8,
+        (c.b() as f32 * k) as u8,
+    )
 }
 
 fn gradient_rect(rect: Rect, top: Color32, bottom: Color32) -> EShape {
@@ -861,25 +1243,39 @@ fn style(ctx: &egui::Context) {
     v.widgets.hovered.weak_bg_fill = Color32::from_rgb(40, 44, 84);
     v.widgets.hovered.bg_fill = Color32::from_rgb(40, 44, 84);
     v.widgets.active.weak_bg_fill = Color32::from_rgb(150, 85, 20);
-    for w in [&mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
+    for w in [
+        &mut v.widgets.inactive,
+        &mut v.widgets.hovered,
+        &mut v.widgets.active,
+        &mut v.widgets.open,
+    ] {
         w.corner_radius = CornerRadius::same(8);
     }
     ctx.set_visuals(v);
     ctx.all_styles_mut(|s| {
         s.spacing.item_spacing = EVec2::new(8.0, 7.0);
         s.spacing.button_padding = EVec2::new(10.0, 6.0);
-        s.text_styles.insert(egui::TextStyle::Body, FontId::proportional(14.5));
-        s.text_styles.insert(egui::TextStyle::Button, FontId::proportional(14.5));
+        s.text_styles
+            .insert(egui::TextStyle::Body, FontId::proportional(14.5));
+        s.text_styles
+            .insert(egui::TextStyle::Button, FontId::proportional(14.5));
     });
 }
 
 fn record_file() -> Option<std::path::PathBuf> {
     let base = std::env::var_os("APPDATA").or_else(|| std::env::var_os("HOME"))?;
-    Some(std::path::PathBuf::from(base).join("PhysicsPlayground").join("tour.txt"))
+    Some(
+        std::path::PathBuf::from(base)
+            .join("PhysicsPlayground")
+            .join("tour.txt"),
+    )
 }
 
 fn load_record() -> f64 {
-    record_file().and_then(|p| std::fs::read_to_string(p).ok()).and_then(|t| t.trim().parse().ok()).unwrap_or(0.0)
+    record_file()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| t.trim().parse().ok())
+        .unwrap_or(0.0)
 }
 
 fn save_record(h: f64) {
